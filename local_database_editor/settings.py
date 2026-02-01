@@ -1,14 +1,33 @@
 import os
+import ipaddress
 import environ
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-env = environ.Env(DEBUG=(bool, False))
+env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", default="change-me-in-production")
-DEBUG = env("DEBUG", default=False)
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "0.0.0.0"])
-ALLOWED_HOSTS = list(ALLOWED_HOSTS) + [f"192.168.178.{i}" for i in range(256)]
+
+def _expand_allowed_hosts_ip_ranges(cidr_list):
+    """Expand CIDR ranges (e.g. 192.168.178.0/24) to a list of host IP strings."""
+    ips = []
+    for cidr in cidr_list:
+        cidr = (cidr or "").strip()
+        if not cidr:
+            continue
+        try:
+            network = ipaddress.ip_network(cidr, strict=False)
+            for ip in network.hosts():
+                ips.append(str(ip))
+        except ValueError:
+            pass
+    return ips
+
+
+SECRET_KEY = env("DJANGO_SECRET_KEY")
+DEBUG = env.bool("DEBUG")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+_allowed_ranges = env.list("ALLOWED_HOSTS_IP_RANGES", default=[])
+ALLOWED_HOSTS = list(ALLOWED_HOSTS) + _expand_allowed_hosts_ip_ranges(_allowed_ranges)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -55,13 +74,13 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
     },
-    "financial_db": {
+    env("PG_ALIAS"): {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("PG_DB", default="financial_db"),
-        "USER": env("PG_USER", default="postgres"),
-        "PASSWORD": env("PG_PASSWORD", default=""),
-        "HOST": env("PG_HOST", default="192.168.178.78"),
-        "PORT": env("PG_PORT", default="5432"),
+        "NAME": env("PG_DB"),
+        "USER": env("PG_USER"),
+        "PASSWORD": env("PG_PASSWORD"),
+        "HOST": env("PG_HOST"),
+        "PORT": env("PG_PORT"),
         "OPTIONS": {"connect_timeout": 10},
     },
 }
@@ -88,7 +107,7 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EDITABLE_DATABASES = ["financial_db"]
+EDITABLE_DATABASES = [env("PG_ALIAS")]
 
 CACHES = {
     "default": {

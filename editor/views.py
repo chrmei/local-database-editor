@@ -71,7 +71,7 @@ def home_redirect(request):
 
 @login_required
 def database_list(request):
-    databases = getattr(settings, "EDITABLE_DATABASES", ["financial_db"])
+    databases = settings.EDITABLE_DATABASES
     return render(
         request,
         "editor/database_list.html",
@@ -81,7 +81,7 @@ def database_list(request):
 
 @login_required
 def schema_list(request, db_alias):
-    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+    if db_alias not in settings.EDITABLE_DATABASES:
         return HttpResponseBadRequest("Unknown database")
     refresh = request.GET.get("refresh") == "1"
     try:
@@ -102,7 +102,7 @@ def schema_list(request, db_alias):
 
 @login_required
 def table_list(request, db_alias, schema_name):
-    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+    if db_alias not in settings.EDITABLE_DATABASES:
         return HttpResponseBadRequest("Unknown database")
     try:
         valid_schemas = get_schemas(db_alias, refresh=False)
@@ -134,7 +134,7 @@ def table_list(request, db_alias, schema_name):
 
 @login_required
 def table_grid(request, db_alias, schema_name, table_name):
-    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+    if db_alias not in settings.EDITABLE_DATABASES:
         return HttpResponseBadRequest("Unknown database")
     try:
         valid_schemas = get_schemas(db_alias, refresh=False)
@@ -262,7 +262,7 @@ def table_grid(request, db_alias, schema_name, table_name):
 def table_save_rows(request, db_alias, schema_name, table_name):
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
-    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+    if db_alias not in settings.EDITABLE_DATABASES:
         return HttpResponseBadRequest("Unknown database")
     valid_schemas = get_schemas(db_alias, refresh=False)
     if schema_name not in valid_schemas:
@@ -326,7 +326,7 @@ def table_insert_row(request, db_alias, schema_name, table_name):
     """POST: insert a new row. PK columns with nextval default are omitted (auto-filled)."""
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
-    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+    if db_alias not in settings.EDITABLE_DATABASES:
         return HttpResponseBadRequest("Unknown database")
     valid_schemas = get_schemas(db_alias, refresh=False)
     if schema_name not in valid_schemas:
@@ -400,7 +400,7 @@ def table_delete_rows(request, db_alias, schema_name, table_name):
     """POST: hard delete rows by primary key."""
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
-    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+    if db_alias not in settings.EDITABLE_DATABASES:
         return HttpResponseBadRequest("Unknown database")
     valid_schemas = get_schemas(db_alias, refresh=False)
     if schema_name not in valid_schemas:
