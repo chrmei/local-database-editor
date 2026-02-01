@@ -16,6 +16,7 @@
   {% if pk_columns %}
   <button type="button" id="save-changes" disabled>Save changes</button>
   <button type="button" id="revert-changes">Revert</button>
+  <button type="button" id="add-row-btn">Add row</button>
   {% endif %}
   <button type="submit" class="apply-filters" form="filter-form">Apply filters</button>
   {% if pk_columns %}
@@ -36,6 +37,9 @@
           <input type="text" name="filter_{{ col.name }}" value="{{ filter_values|get_item:col.name }}" placeholder="Filter" class="filter-input" data-column="{{ col.name }}">
         </th>
         {% endfor %}
+        {% if pk_columns %}
+        <th class="actions-header">Actions</th>
+        {% endif %}
       </tr>
     </thead>
   <tbody>
@@ -48,9 +52,17 @@
         <input type="checkbox" class="cell-edit" {% if row|input_value_for_column:col == 'true' %}checked{% endif %} style="display:none">
         {% else %}
         <input type="{{ col|input_type_for_column }}" class="cell-edit" value="{{ row|input_value_for_column:col|force_escape }}" style="display:none">
+        {% if col|is_datetime_column %}
+        <button type="button" class="cell-now" style="display:none" title="Fill with current date/time">Now</button>
+        {% endif %}
         {% endif %}
       </td>
       {% endfor %}
+      {% if pk_columns %}
+      <td class="actions-cell">
+        <button type="button" class="delete-row" title="Hard delete row">Delete</button>
+      </td>
+      {% endif %}
     </tr>
     {% endfor %}
   </tbody>

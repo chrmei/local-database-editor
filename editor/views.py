@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -15,7 +16,53 @@ from .introspection import (
     get_columns,
     get_primary_key_columns,
     get_table_meta,
+    get_pk_sequence_columns,
 )
+
+_DATE_TYPES = {"date"}
+_TS_TYPES = {"timestamp with time zone", "timestamp without time zone"}
+_TIME_TYPES = {"time with time zone", "time without time zone"}
+_BOOL_TYPES = {"boolean"}
+_INT_TYPES = {"integer", "bigint", "smallint", "serial", "bigserial"}
+_FLOAT_TYPES = {"real", "double precision"}
+_DECIMAL_TYPES = {"numeric", "decimal"}
+
+
+def _coerce_value(val, data_type):
+    """Coerce a value for DB write based on PostgreSQL data_type."""
+    if data_type is None:
+        return val
+    dt = (data_type or "").strip().lower()
+    if dt in _DATE_TYPES or dt in _TS_TYPES or dt in _TIME_TYPES:
+        if val is None or (isinstance(val, str) and val.strip() == ""):
+            return None
+    if dt in _BOOL_TYPES:
+        if val is None or (isinstance(val, str) and val.strip() == ""):
+            return None
+        if isinstance(val, bool):
+            return val
+        s = str(val).strip().lower()
+        if s in ("t", "true", "1", "yes", "on"):
+            return True
+        if s in ("f", "false", "0", "no", "off"):
+            return False
+        return None
+    if dt in _INT_TYPES and val is not None and (isinstance(val, str) and val.strip() != "" or isinstance(val, (int, float))):
+        try:
+            return int(val) if not isinstance(val, int) else val
+        except (ValueError, TypeError):
+            return val
+    if dt in _FLOAT_TYPES and val is not None and (isinstance(val, str) and val.strip() != "" or isinstance(val, (int, float))):
+        try:
+            return float(val) if not isinstance(val, float) else val
+        except (ValueError, TypeError):
+            return val
+    if dt in _DECIMAL_TYPES and val is not None and (isinstance(val, str) and val.strip() != "" or isinstance(val, (int, float, Decimal))):
+        try:
+            return Decimal(str(val))
+        except (ValueError, TypeError, Exception):
+            return val
+    return val
 
 
 def home_redirect(request):
@@ -177,12 +224,17 @@ def table_grid(request, db_alias, schema_name, table_name):
     row_data = [dict(zip(column_names, row)) for row in rows]
 
     filter_values = {col: request.GET.get(f"filter_{col}", "") for col in column_names}
+    pk_uses_sequence = get_pk_sequence_columns(db_alias, schema_name, table_name, refresh=refresh)
     config_json = json.dumps({
         "dbAlias": db_alias,
         "schemaName": schema_name,
         "tableName": table_name,
         "pkColumns": pk_columns,
+        "pkUsesSequence": pk_uses_sequence,
+        "columns": [{"name": c["name"], "dataType": c["data_type"], "isNullable": c["is_nullable"], "columnDefault": c.get("column_default")} for c in columns],
         "saveUrl": reverse("table_save_rows", args=[db_alias, schema_name, table_name]),
+        "insertUrl": reverse("table_insert_row", args=[db_alias, schema_name, table_name]),
+        "deleteUrl": reverse("table_delete_rows", args=[db_alias, schema_name, table_name]),
         "csrfToken": get_token(request),
     })
 
@@ -233,31 +285,6 @@ def table_save_rows(request, db_alias, schema_name, table_name):
         return JsonResponse({"ok": False, "error": "Missing or invalid 'rows' array"})
 
     column_by_name = {c["name"]: c for c in columns}
-    _DATE_TYPES = {"date"}
-    _TS_TYPES = {"timestamp with time zone", "timestamp without time zone"}
-    _TIME_TYPES = {"time with time zone", "time without time zone"}
-    _BOOL_TYPES = {"boolean"}
-
-    def _coerce_value(val, data_type):
-        if data_type is None:
-            return val
-        dt = (data_type or "").strip().lower()
-        if dt in _DATE_TYPES or dt in _TS_TYPES or dt in _TIME_TYPES:
-            if val is None or (isinstance(val, str) and val.strip() == ""):
-                return None
-        if dt in _BOOL_TYPES:
-            if val is None or (isinstance(val, str) and val.strip() == ""):
-                return None
-            if isinstance(val, bool):
-                return val
-            s = str(val).strip().lower()
-            if s in ("t", "true", "1", "yes", "on"):
-                return True
-            if s in ("f", "false", "0", "no", "off"):
-                return False
-            return None
-        return val
-
     from django.db import connections
     conn = connections[db_alias]
     quoted_schema = conn.ops.quote_name(schema_name)
@@ -292,3 +319,133 @@ def table_save_rows(request, db_alias, schema_name, table_name):
         return JsonResponse({"ok": True, "updated": updated})
     except ValueError:
         return JsonResponse({"ok": False, "errors": errors})
+
+
+@login_required
+def table_insert_row(request, db_alias, schema_name, table_name):
+    """POST: insert a new row. PK columns with nextval default are omitted (auto-filled)."""
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+        return HttpResponseBadRequest("Unknown database")
+    valid_schemas = get_schemas(db_alias, refresh=False)
+    if schema_name not in valid_schemas:
+        return HttpResponseBadRequest("Unknown schema")
+    tables = get_tables(db_alias, schema_name, refresh=False)
+    if table_name not in tables:
+        return HttpResponseBadRequest("Unknown table")
+    columns, pk_columns = get_table_meta(db_alias, schema_name, table_name, refresh=False)
+    pk_uses_sequence = get_pk_sequence_columns(db_alias, schema_name, table_name, refresh=False)
+    column_names = [c["name"] for c in columns]
+    col_allowlist = set(column_names)
+    pk_set = set(pk_columns)
+    column_by_name = {c["name"]: c for c in columns}
+
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"})
+    cols = payload.get("columns")
+    if not isinstance(cols, dict):
+        return JsonResponse({"ok": False, "error": "Missing or invalid 'columns' object"})
+
+    # Columns to insert: all columns except PK columns that use nextval (omitted so DB fills them).
+    # For other PK columns we require a value. For non-PK, use value or NULL if nullable.
+    insert_cols = []
+    for c in column_names:
+        if c in pk_uses_sequence:
+            continue  # omit; PostgreSQL will use nextval
+        if c not in col_allowlist:
+            continue
+        val = cols.get(c)
+        is_empty = val is None or (isinstance(val, str) and val.strip() == "")
+        if c in pk_set and is_empty:
+            return JsonResponse({"ok": False, "error": f"Primary key column '{c}' is required (no sequence)."})
+        col_info = column_by_name.get(c) or {}
+        if is_empty and not col_info.get("is_nullable"):
+            return JsonResponse({"ok": False, "error": f"Non-nullable column '{c}' requires a value."})
+        insert_cols.append(c)
+
+    if not insert_cols:
+        return JsonResponse({"ok": False, "error": "No columns to insert"})
+
+    from django.db import connections
+    conn = connections[db_alias]
+    quoted_schema = conn.ops.quote_name(schema_name)
+    quoted_table = conn.ops.quote_name(table_name)
+    values = []
+    for c in insert_cols:
+        val = cols.get(c)
+        if val is None or (isinstance(val, str) and val.strip() == ""):
+            values.append(None)
+        else:
+            data_type = (column_by_name.get(c) or {}).get("data_type")
+            values.append(_coerce_value(val, data_type))
+
+    quoted_cols = [conn.ops.quote_name(c) for c in insert_cols]
+    placeholders = ["%s"] * len(insert_cols)
+    sql = f'INSERT INTO {quoted_schema}.{quoted_table} ({", ".join(quoted_cols)}) VALUES ({", ".join(placeholders)})'
+    try:
+        with transaction.atomic(using=db_alias):
+            with conn.cursor() as cur:
+                cur.execute(sql, values)
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)})
+
+    return JsonResponse({"ok": True, "inserted": 1})
+
+
+@login_required
+def table_delete_rows(request, db_alias, schema_name, table_name):
+    """POST: hard delete rows by primary key."""
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+    if db_alias not in getattr(settings, "EDITABLE_DATABASES", []):
+        return HttpResponseBadRequest("Unknown database")
+    valid_schemas = get_schemas(db_alias, refresh=False)
+    if schema_name not in valid_schemas:
+        return HttpResponseBadRequest("Unknown schema")
+    tables = get_tables(db_alias, schema_name, refresh=False)
+    if table_name not in tables:
+        return HttpResponseBadRequest("Unknown table")
+    columns, pk_columns = get_table_meta(db_alias, schema_name, table_name, refresh=False)
+    if not pk_columns:
+        return JsonResponse({"ok": False, "error": "Table has no primary key"})
+    pk_set = set(pk_columns)
+
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"})
+    pks = payload.get("pks")
+    if not isinstance(pks, list):
+        return JsonResponse({"ok": False, "error": "Missing or invalid 'pks' array"})
+
+    from django.db import connections
+    conn = connections[db_alias]
+    quoted_schema = conn.ops.quote_name(schema_name)
+    quoted_table = conn.ops.quote_name(table_name)
+    deleted = 0
+    errors = []
+    try:
+        with transaction.atomic(using=db_alias):
+            with conn.cursor() as cur:
+                for pk in pks:
+                    if not isinstance(pk, dict) or not pk_set.issubset(set(pk.keys())):
+                        errors.append({"pk": pk, "error": "Invalid or missing primary key"})
+                        continue
+                    where_parts = [f'{conn.ops.quote_name(k)} = %s' for k in pk_columns]
+                    where_vals = [pk[k] for k in pk_columns]
+                    sql = f'DELETE FROM {quoted_schema}.{quoted_table} WHERE {" AND ".join(where_parts)}'
+                    try:
+                        cur.execute(sql, where_vals)
+                        deleted += cur.rowcount
+                    except Exception as e:
+                        errors.append({"pk": pk, "error": str(e)})
+            if errors:
+                raise ValueError("Delete errors")
+        return JsonResponse({"ok": True, "deleted": deleted})
+    except ValueError:
+        return JsonResponse({"ok": False, "errors": errors})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)})

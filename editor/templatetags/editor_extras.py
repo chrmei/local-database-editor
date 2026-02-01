@@ -46,6 +46,14 @@ def _html_input_type(data_type):
     return "text"
 
 
+def _is_datetime_column(data_type):
+    """Return True if column is date, timestamp, or time (eligible for 'Now' button)."""
+    if not data_type:
+        return False
+    dt = data_type.strip().lower()
+    return dt in DATE_TYPES or dt in TIMESTAMP_TYPES or dt in TIME_TYPES
+
+
 def _format_input_value(val, data_type):
     """Format a value for use in an HTML input (date → YYYY-MM-DD, etc.)."""
     if val is None or (isinstance(val, str) and val.strip() == ""):
@@ -98,6 +106,14 @@ def input_type_for_column(column):
     if not column or not isinstance(column, dict):
         return "text"
     return _html_input_type(column.get("data_type") or "")
+
+
+@register.filter
+def is_datetime_column(column):
+    """Return True if column is date/timestamp/time (show 'Now' button)."""
+    if not column or not isinstance(column, dict):
+        return False
+    return _is_datetime_column(column.get("data_type") or "")
 
 
 @register.filter

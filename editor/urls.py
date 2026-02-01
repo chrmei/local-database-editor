@@ -24,4 +24,14 @@ urlpatterns = [
         views.table_save_rows,
         name="table_save_rows",
     ),
+    path(
+        "databases/<str:db_alias>/schemas/<str:schema_name>/tables/<str:table_name>/insert/",
+        views.table_insert_row,
+        name="table_insert_row",
+    ),
+    path(
+        "databases/<str:db_alias>/schemas/<str:schema_name>/tables/<str:table_name>/delete/",
+        views.table_delete_rows,
+        name="table_delete_rows",
+    ),
 ]

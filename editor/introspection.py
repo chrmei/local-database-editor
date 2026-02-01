@@ -56,7 +56,8 @@ def get_tables(db_alias: str, schema_name: str, refresh: bool = False) -> list[s
 
 def get_columns(db_alias: str, schema_name: str, table_name: str, refresh: bool = False) -> list[dict]:
     """
-    Return list of column info dicts: name, data_type, is_nullable.
+    Return list of column info dicts: name, data_type, is_nullable, column_default.
+    column_default is the PostgreSQL default expression (e.g. nextval(...) for serial).
     """
     key = _cache_key("editor", "columns", db_alias, schema_name, table_name)
     if not refresh:
@@ -67,17 +68,40 @@ def get_columns(db_alias: str, schema_name: str, table_name: str, refresh: bool 
     conn = connections[db_alias]
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT column_name, data_type, is_nullable
+            SELECT column_name, data_type, is_nullable, column_default
             FROM information_schema.columns
             WHERE table_schema = %s AND table_name = %s
             ORDER BY ordinal_position
         """, [schema_name, table_name])
         columns = [
-            {"name": row[0], "data_type": row[1], "is_nullable": row[2] == "YES"}
+            {
+                "name": row[0],
+                "data_type": row[1],
+                "is_nullable": row[2] == "YES",
+                "column_default": row[3],
+            }
             for row in cur.fetchall()
         ]
     cache.set(key, columns, timeout=getattr(settings, "INTROSPECTION_CACHE_TIMEOUT", 60))
     return columns
+
+
+def get_pk_sequence_columns(db_alias: str, schema_name: str, table_name: str, refresh: bool = False) -> list[str]:
+    """
+    Return list of primary key column names that use a sequence (nextval) as default.
+    Used to omit these columns on INSERT so PostgreSQL fills them automatically.
+    """
+    columns = get_columns(db_alias, schema_name, table_name, refresh=refresh)
+    pk_columns = get_primary_key_columns(db_alias, schema_name, table_name, refresh=refresh)
+    pk_set = set(pk_columns)
+    result = []
+    for c in columns:
+        if c["name"] not in pk_set:
+            continue
+        default = (c.get("column_default") or "").strip().lower()
+        if "nextval" in default:
+            result.append(c["name"])
+    return result
 
 
 def get_primary_key_columns(db_alias: str, schema_name: str, table_name: str, refresh: bool = False) -> list[str]:

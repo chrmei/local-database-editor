@@ -33,6 +33,10 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color
 .data-grid th a:hover { text-decoration: underline; }
 .data-grid .filter-input { width: 100%; max-width: 120px; padding: 0.25rem; margin-top: 0.25rem; background: #1a1a2e; border: 1px solid #0f3460; color: #eee; border-radius: 4px; font-size: 0.85rem; }
 .data-grid .cell-edit { width: 100%; padding: 0.25rem; background: #1a1a2e; border: 1px solid #e94560; color: #eee; border-radius: 4px; }
+.data-grid td .cell-now { margin-left: 0.25rem; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: #0f3460; color: #eee; border: 1px solid #e94560; border-radius: 4px; cursor: pointer; }
+.data-grid td .cell-now:hover { background: #e94560; color: #fff; }
+.data-grid tr.add-row-form .add-row-now { margin-left: 0.25rem; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: #0f3460; color: #eee; border: 1px solid #e94560; border-radius: 4px; cursor: pointer; }
+.data-grid tr.add-row-form .add-row-now:hover { background: #e94560; color: #fff; }
 .pagination { margin-top: 1rem; color: #888; }
 .pagination a { color: #e94560; text-decoration: none; margin: 0 0.5rem; }
 .apply-filters { padding: 0.4rem 0.8rem; margin-left: 0.5rem; background: #0f3460; color: #eee; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
@@ -50,3 +54,13 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color
 .toast.success { background: #28a745; }
 .toast.error { background: #e94560; }
 .toast.info { background: #0f3460; border: 1px solid #e94560; }
+
+.data-grid .actions-header { min-width: 100px; }
+.data-grid .actions-cell { white-space: nowrap; }
+.data-grid .actions-cell .delete-row { padding: 0.25rem 0.5rem; font-size: 0.85rem; background: #1a1a2e; color: #e94560; border: 1px solid #e94560; border-radius: 4px; cursor: pointer; }
+.data-grid .actions-cell .delete-row:hover { background: #e94560; color: #fff; }
+.data-grid tr.add-row-form td { background: rgba(15, 52, 96, 0.5); }
+.data-grid tr.add-row-form .add-row-input { width: 100%; padding: 0.25rem; background: #1a1a2e; border: 1px solid #e94560; color: #eee; border-radius: 4px; }
+.data-grid tr.add-row-form .add-row-auto { color: #888; font-style: italic; }
+.data-grid tr.add-row-form .add-row-submit { padding: 0.25rem 0.5rem; margin-right: 0.25rem; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+.data-grid tr.add-row-form .add-row-cancel { padding: 0.25rem 0.5rem; background: #6c757d; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
