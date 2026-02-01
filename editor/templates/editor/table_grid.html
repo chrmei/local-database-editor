@@ -16,6 +16,9 @@
   {% if pk_columns %}
   <button type="button" id="save-changes" disabled>Save changes</button>
   <button type="button" id="revert-changes">Revert</button>
+  {% endif %}
+  <button type="submit" class="apply-filters" form="filter-form">Apply filters</button>
+  {% if pk_columns %}
   <span id="dirty-count"></span>
   {% else %}
   <span class="read-only-msg">Read-only (table has no primary key). Add a primary key in PostgreSQL to enable editing.</span>
@@ -52,7 +55,6 @@
     {% endfor %}
   </tbody>
   </table>
-  <button type="submit" class="apply-filters">Apply filters</button>
 </form>
 <p class="pagination">
   {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&sort={{ sort_col }}&order={{ sort_order }}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}">Previous</a>{% endif %}
