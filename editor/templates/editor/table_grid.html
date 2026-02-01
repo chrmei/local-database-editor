@@ -28,6 +28,7 @@
 <form method="get" id="filter-form" class="filter-form">
   <input type="hidden" name="sort" value="{{ sort_col }}">
   <input type="hidden" name="order" value="{{ sort_order }}">
+  <div class="data-grid-wrapper">
   <table class="data-grid" id="data-grid">
     <thead>
       <tr>
@@ -68,6 +69,7 @@
     {% endfor %}
   </tbody>
   </table>
+  </div>
 </form>
 <p class="pagination">
   {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&sort={{ sort_col }}&order={{ sort_order }}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}">Previous</a>{% endif %}

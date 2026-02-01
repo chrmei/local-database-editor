@@ -17,7 +17,7 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color
 .clean-display-toggle .toggle-label { white-space: nowrap; }
 .clean-display-toggle:hover { color: #eee; }
 .clean-display-toggle:hover .toggle-slider { border-color: #e94560; }
-.main { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+.main { padding: 1.5rem; width: 100%; box-sizing: border-box; }
 .login-box { max-width: 320px; margin: 3rem auto; padding: 2rem; background: #16213e; border-radius: 8px; }
 .login-box h1 { margin-top: 0; font-size: 1.25rem; }
 .login-box .form-row { margin-bottom: 1rem; }
@@ -37,9 +37,10 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color
 .grid-toolbar #dirty-count { color: #aaa; font-size: 0.9rem; }
 .grid-toolbar .apply-filters { padding: 0.5rem 1rem; margin-left: 0; background: #0f3460; color: #eee; }
 .grid-toolbar .apply-filters:hover { background: #e94560; color: #fff; }
-.data-grid { width: 100%; border-collapse: collapse; background: #16213e; border-radius: 6px; overflow: hidden; }
+.data-grid-wrapper { width: 100%; overflow-x: auto; margin-bottom: 0; }
+.data-grid { width: 100%; min-width: max-content; border-collapse: collapse; background: #16213e; border-radius: 6px; table-layout: auto; }
 .data-grid th, .data-grid td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #0f3460; }
-.data-grid th { background: #0f3460; color: #e94560; font-weight: 600; }
+.data-grid th { background: #0f3460; color: #e94560; font-weight: 600; white-space: nowrap; }
 .data-grid td { cursor: pointer; }
 .data-grid tr.dirty td { background: rgba(233, 69, 96, 0.1); }
 .data-grid th a { color: #e94560; text-decoration: none; }
