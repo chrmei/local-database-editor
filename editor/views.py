@@ -232,6 +232,32 @@ def table_save_rows(request, db_alias, schema_name, table_name):
     if not isinstance(payload.get("rows"), list):
         return JsonResponse({"ok": False, "error": "Missing or invalid 'rows' array"})
 
+    column_by_name = {c["name"]: c for c in columns}
+    _DATE_TYPES = {"date"}
+    _TS_TYPES = {"timestamp with time zone", "timestamp without time zone"}
+    _TIME_TYPES = {"time with time zone", "time without time zone"}
+    _BOOL_TYPES = {"boolean"}
+
+    def _coerce_value(val, data_type):
+        if data_type is None:
+            return val
+        dt = (data_type or "").strip().lower()
+        if dt in _DATE_TYPES or dt in _TS_TYPES or dt in _TIME_TYPES:
+            if val is None or (isinstance(val, str) and val.strip() == ""):
+                return None
+        if dt in _BOOL_TYPES:
+            if val is None or (isinstance(val, str) and val.strip() == ""):
+                return None
+            if isinstance(val, bool):
+                return val
+            s = str(val).strip().lower()
+            if s in ("t", "true", "1", "yes", "on"):
+                return True
+            if s in ("f", "false", "0", "no", "off"):
+                return False
+            return None
+        return val
+
     from django.db import connections
     conn = connections[db_alias]
     quoted_schema = conn.ops.quote_name(schema_name)
@@ -252,7 +278,8 @@ def table_save_rows(request, db_alias, schema_name, table_name):
                         continue
                     set_parts = [f'{conn.ops.quote_name(c)} = %s' for c in update_cols]
                     where_parts = [f'{conn.ops.quote_name(k)} = %s' for k in pk_columns]
-                    set_vals = [update_cols[c] for c in update_cols]
+                    col_types = {c: (column_by_name.get(c) or {}).get("data_type") for c in update_cols}
+                    set_vals = [_coerce_value(update_cols[c], col_types.get(c)) for c in update_cols]
                     where_vals = [pk[k] for k in pk_columns]
                     sql = f'UPDATE {quoted_schema}.{quoted_table} SET {", ".join(set_parts)} WHERE {" AND ".join(where_parts)}'
                     try:

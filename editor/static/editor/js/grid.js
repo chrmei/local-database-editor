@@ -35,6 +35,13 @@
     }
   }
 
+  function getCellValue(cell) {
+    var input = cell.querySelector(".cell-edit");
+    if (!input) return cell.getAttribute("data-original") || "";
+    if (input.type === "checkbox") return input.checked ? "true" : "false";
+    return input.value;
+  }
+
   function getRowData(rowEl) {
     var pk = getRowPk(rowEl);
     if (!pk) return null;
@@ -43,8 +50,7 @@
     for (var i = 0; i < cells.length; i++) {
       var cell = cells[i];
       var col = cell.getAttribute("data-column");
-      var input = cell.querySelector(".cell-edit");
-      columns[col] = input ? input.value : cell.getAttribute("data-original");
+      columns[col] = getCellValue(cell);
     }
     return { pk: pk, columns: columns };
   }
@@ -84,11 +90,18 @@
     input.select();
   }
 
+  function getDisplayValue(cellEl) {
+    var input = cellEl.querySelector(".cell-edit");
+    if (!input) return "";
+    if (input.type === "checkbox") return input.checked ? "true" : "false";
+    return input.value;
+  }
+
   function hideEdit(cellEl) {
     var display = cellEl.querySelector(".cell-display");
     var input = cellEl.querySelector(".cell-edit");
     if (!display || !input) return;
-    var newVal = input.value;
+    var newVal = getDisplayValue(cellEl);
     display.textContent = newVal;
     display.style.display = "";
     input.style.display = "none";
@@ -114,7 +127,7 @@
         hideEdit(cell);
         var row = cell.closest("tr");
         var original = cell.getAttribute("data-original");
-        var current = input.value;
+        var current = getCellValue(cell);
         if (original !== current) markDirty(row);
       }
     }
@@ -128,7 +141,12 @@
       var input = e.target;
       if (input.classList.contains("cell-edit")) {
         var cell = input.closest("td");
-        input.value = cell.getAttribute("data-original");
+        var original = cell.getAttribute("data-original");
+        if (input.type === "checkbox") {
+          input.checked = original === "true";
+        } else {
+          input.value = original;
+        }
         hideEdit(cell);
       }
     }
@@ -141,7 +159,11 @@
         var input = cell.querySelector(".cell-edit");
         var original = cell.getAttribute("data-original");
         if (input) {
-          input.value = original;
+          if (input.type === "checkbox") {
+            input.checked = original === "true";
+          } else {
+            input.value = original;
+          }
           cell.querySelector(".cell-display").textContent = original;
         }
       });
@@ -176,8 +198,7 @@
         dirtyRows.forEach(function (rowEl) {
           var cells = rowEl.querySelectorAll("td[data-column]");
           cells.forEach(function (cell) {
-            var input = cell.querySelector(".cell-edit");
-            var val = input ? input.value : cell.getAttribute("data-original");
+            var val = getCellValue(cell);
             cell.setAttribute("data-original", val);
             var disp = cell.querySelector(".cell-display");
             if (disp) disp.textContent = val;

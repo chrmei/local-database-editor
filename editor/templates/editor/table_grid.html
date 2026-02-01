@@ -27,10 +27,10 @@
   <table class="data-grid" id="data-grid">
     <thead>
       <tr>
-        {% for col in column_names %}
+        {% for col in columns %}
         <th>
-          <a href="?sort={{ col }}&order={% if sort_col == col and sort_order == 'asc' %}desc{% else %}asc{% endif %}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}&page=1">{{ col }}{% if sort_col == col %} ({{ sort_order }}){% endif %}</a>
-          <input type="text" name="filter_{{ col }}" value="{{ filter_values|get_item:col }}" placeholder="Filter" class="filter-input" data-column="{{ col }}">
+          <a href="?sort={{ col.name }}&order={% if sort_col == col.name and sort_order == 'asc' %}desc{% else %}asc{% endif %}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}&page=1">{{ col.name }}{% if sort_col == col.name %} ({{ sort_order }}){% endif %}</a>
+          <input type="text" name="filter_{{ col.name }}" value="{{ filter_values|get_item:col.name }}" placeholder="Filter" class="filter-input" data-column="{{ col.name }}">
         </th>
         {% endfor %}
       </tr>
@@ -38,8 +38,15 @@
   <tbody>
     {% for row in rows %}
     <tr data-row-index="{{ forloop.counter0 }}" data-pk="{{ row|pk_json:pk_columns }}">
-      {% for col in column_names %}
-      <td data-column="{{ col }}" data-original="{{ row|get_item:col|force_escape }}"><span class="cell-display">{{ row|get_item:col }}</span><input type="text" class="cell-edit" value="{{ row|get_item:col|force_escape }}" style="display:none"></td>
+      {% for col in columns %}
+      <td data-column="{{ col.name }}" data-type="{{ col.data_type }}" data-original="{{ row|input_value_for_column:col|force_escape }}">
+        <span class="cell-display">{{ row|get_item:col.name }}</span>
+        {% if col|input_type_for_column == "checkbox" %}
+        <input type="checkbox" class="cell-edit" {% if row|input_value_for_column:col == 'true' %}checked{% endif %} style="display:none">
+        {% else %}
+        <input type="{{ col|input_type_for_column }}" class="cell-edit" value="{{ row|input_value_for_column:col|force_escape }}" style="display:none">
+        {% endif %}
+      </td>
       {% endfor %}
     </tr>
     {% endfor %}
