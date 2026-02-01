@@ -1,5 +1,76 @@
 (function () {
   var configEl = document.getElementById("edit-grid-config");
+  var grid = document.getElementById("data-grid");
+
+  var INTEGER_TYPES = ["integer", "bigint", "smallint", "serial", "bigserial"];
+  var FLOAT_TYPES = ["numeric", "decimal", "real", "double precision"];
+
+  function isCleanDisplayOn() {
+    return localStorage.getItem("editorCleanDisplay") !== "false";
+  }
+
+  function formatCleanDisplay(raw, dataType) {
+    if (raw == null || String(raw).trim() === "") return "";
+    var s = String(raw).trim();
+    var dt = (dataType || "").trim().toLowerCase();
+    if (dt === "date" || dt.indexOf("timestamp") !== -1) {
+      return s.length >= 10 ? s.slice(0, 10) : s;
+    }
+    if (INTEGER_TYPES.indexOf(dt) !== -1) {
+      var n = parseFloat(s);
+      if (isNaN(n)) return s;
+      return String(Math.round(n));
+    }
+    if (FLOAT_TYPES.indexOf(dt) !== -1) {
+      var n = parseFloat(s);
+      if (isNaN(n)) return s;
+      return n.toFixed(2);
+    }
+    return s;
+  }
+
+  function setCellDisplay(cell, rawValue) {
+    var rawSpan = cell.querySelector(".cell-raw");
+    var display = cell.querySelector(".cell-display");
+    if (!display) return;
+    var val = rawValue == null ? "" : String(rawValue);
+    if (rawSpan) rawSpan.textContent = val;
+    var isClean = isCleanDisplayOn();
+    display.textContent = isClean ? formatCleanDisplay(val, cell.getAttribute("data-type")) : val;
+  }
+
+  function applyCleanDisplay() {
+    var tbody = grid && grid.querySelector("tbody");
+    if (!tbody) return;
+    var cells = tbody.querySelectorAll("tr:not(.add-row-form) td[data-column]");
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      var rawSpan = cell.querySelector(".cell-raw");
+      var raw = rawSpan ? rawSpan.textContent : (cell.querySelector(".cell-display") && cell.querySelector(".cell-display").textContent);
+      setCellDisplay(cell, raw);
+    }
+  }
+
+  function revertCleanDisplay() {
+    var tbody = grid && grid.querySelector("tbody");
+    if (!tbody) return;
+    var cells = tbody.querySelectorAll("tr:not(.add-row-form) td[data-column]");
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      var rawSpan = cell.querySelector(".cell-raw");
+      var display = cell.querySelector(".cell-display");
+      if (rawSpan && display) display.textContent = rawSpan.textContent;
+    }
+  }
+
+  if (grid) {
+    if (isCleanDisplayOn()) applyCleanDisplay();
+    window.addEventListener("cleanDisplayChange", function (e) {
+      if (e.detail && e.detail.clean) applyCleanDisplay();
+      else revertCleanDisplay();
+    });
+  }
+
   if (!configEl) return;
   var config = JSON.parse(configEl.textContent);
   var pkColumns = config.pkColumns || [];
@@ -124,7 +195,7 @@
     var input = cellEl.querySelector(".cell-edit");
     if (!display || !input) return;
     var newVal = getDisplayValue(cellEl);
-    display.textContent = newVal;
+    setCellDisplay(cellEl, newVal);
     display.style.display = "";
     input.style.display = "none";
     var nowBtn = cellEl.querySelector(".cell-now");
@@ -200,7 +271,7 @@
           } else {
             input.value = original;
           }
-          cell.querySelector(".cell-display").textContent = original;
+          setCellDisplay(cell, original);
         }
       });
       unmarkDirty(rowEl);
@@ -236,8 +307,7 @@
           cells.forEach(function (cell) {
             var val = getCellValue(cell);
             cell.setAttribute("data-original", val);
-            var disp = cell.querySelector(".cell-display");
-            if (disp) disp.textContent = val;
+            setCellDisplay(cell, val);
           });
           unmarkDirty(rowEl);
         });

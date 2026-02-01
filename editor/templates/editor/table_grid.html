@@ -47,6 +47,7 @@
     <tr data-row-index="{{ forloop.counter0 }}" data-pk="{{ row|pk_json:pk_columns }}">
       {% for col in columns %}
       <td data-column="{{ col.name }}" data-type="{{ col.data_type }}" data-original="{{ row|input_value_for_column:col|force_escape }}">
+        <span class="cell-raw" aria-hidden="true" style="display:none">{{ row|get_item:col.name }}</span>
         <span class="cell-display">{{ row|get_item:col.name }}</span>
         {% if col|input_type_for_column == "checkbox" %}
         <input type="checkbox" class="cell-edit" {% if row|input_value_for_column:col == 'true' %}checked{% endif %} style="display:none">
@@ -75,6 +76,6 @@
 </p>
 {% if pk_columns %}
 <script id="edit-grid-config" type="application/json">{{ config_json|safe }}</script>
-<script src="{% static 'editor/js/grid.js' %}"></script>
 {% endif %}
+<script src="{% static 'editor/js/grid.js' %}"></script>
 {% endblock %}

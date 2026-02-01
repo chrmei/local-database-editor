@@ -2,8 +2,21 @@
 body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
 .site-header { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; background: #16213e; border-bottom: 1px solid #0f3460; }
 .site-header .logo { color: #e94560; text-decoration: none; font-weight: 700; }
-.site-header .user { margin-left: auto; color: #aaa; }
+.site-header .header-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+.site-header .header-right-row { display: flex; align-items: center; gap: 1rem; }
+.site-header .user { color: #aaa; }
 .site-header .logout { color: #e94560; text-decoration: none; }
+
+/* Clean display toggle - below logout on the right */
+.clean-display-toggle { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #aaa; user-select: none; }
+.clean-display-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.clean-display-toggle .toggle-slider { display: inline-block; width: 2.25rem; height: 1.2rem; background: #0f3460; border-radius: 1.2rem; position: relative; transition: background 0.2s; border: 1px solid #0f3460; }
+.clean-display-toggle .toggle-slider::before { content: ""; position: absolute; height: 0.9rem; width: 0.9rem; left: 2px; bottom: 2px; background: #eee; border-radius: 50%; transition: transform 0.2s; }
+.clean-display-toggle input:checked + .toggle-slider { background: #e94560; border-color: #e94560; }
+.clean-display-toggle input:checked + .toggle-slider::before { transform: translateX(1.05rem); }
+.clean-display-toggle .toggle-label { white-space: nowrap; }
+.clean-display-toggle:hover { color: #eee; }
+.clean-display-toggle:hover .toggle-slider { border-color: #e94560; }
 .main { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
 .login-box { max-width: 320px; margin: 3rem auto; padding: 2rem; background: #16213e; border-radius: 8px; }
 .login-box h1 { margin-top: 0; font-size: 1.25rem; }

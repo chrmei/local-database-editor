@@ -11,10 +11,33 @@
   <header class="site-header">
     <a href="{% url 'database_list' %}" class="logo">Database Editor</a>
     {% if user.is_authenticated %}
-    <span class="user">{{ user.get_username }}</span>
-    <a href="{% url 'logout' %}" class="logout">Log out</a>
+    <div class="header-right">
+      <div class="header-right-row">
+        <span class="user">{{ user.get_username }}</span>
+        <a href="{% url 'logout' %}" class="logout">Log out</a>
+      </div>
+      <label class="clean-display-toggle" title="Numbers: 2 decimals; dates: YYYY-MM-DD">
+        <input type="checkbox" id="clean-display-toggle" aria-label="Clean display">
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">Clean display</span>
+      </label>
+    </div>
     {% endif %}
   </header>
+  {% if user.is_authenticated %}
+  <script>
+    (function () {
+      var key = "editorCleanDisplay";
+      var toggle = document.getElementById("clean-display-toggle");
+      if (!toggle) return;
+      toggle.checked = localStorage.getItem(key) !== "false";
+      toggle.addEventListener("change", function () {
+        localStorage.setItem(key, toggle.checked ? "true" : "false");
+        window.dispatchEvent(new CustomEvent("cleanDisplayChange", { detail: { clean: toggle.checked } }));
+      });
+    })();
+  </script>
+  {% endif %}
   <main class="main">
     {% block breadcrumb %}{% endblock %}
     {% block content %}{% endblock %}
