@@ -1,0 +1,12 @@
+{% extends "editor/base.html" %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><a href="{% url 'database_list' %}">Databases</a> → <a href="{% url 'schema_list' db_alias=db_alias %}">{{ db_alias }}</a> → <a href="{% url 'table_list' db_alias=db_alias schema_name=schema_name %}">{{ schema_name }}</a> → Tables <a href="?refresh=1" class="refresh">Refresh</a></nav>
+{% endblock %}
+{% block content %}
+<h1>Tables ({{ schema_name }})</h1>
+<ul class="card-list">
+  {% for table in tables %}
+  <li><a href="{% url 'table_grid' db_alias=db_alias schema_name=schema_name table_name=table %}">{{ table }}</a></li>
+  {% endfor %}
+</ul>
+{% endblock %}

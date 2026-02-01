@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Database Editor{% endblock %}</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'editor/css/style.css' %}">
+</head>
+<body>
+  <header class="site-header">
+    <a href="{% url 'database_list' %}" class="logo">Database Editor</a>
+    {% if user.is_authenticated %}
+    <span class="user">{{ user.get_username }}</span>
+    <a href="{% url 'logout' %}" class="logout">Log out</a>
+    {% endif %}
+  </header>
+  <main class="main">
+    {% block breadcrumb %}{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+  <div id="toast-container" class="toast-container"></div>
+</body>
+</html>

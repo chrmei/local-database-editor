@@ -1,0 +1,18 @@
+# Uses DOCKER_IMAGE from .env if set (e.g. your-dockerhub-username/local-database-editor:latest).
+# If unset, uses local-database-editor:latest (for local build with: docker compose build).
+services:
+  web:
+    image: ${DOCKER_IMAGE:-local-database-editor:latest}
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=local_database_editor.settings
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py create_single_user --noinput 2>/dev/null || true &&
+             gunicorn --bind 0.0.0.0:8000 local_database_editor.wsgi:application"

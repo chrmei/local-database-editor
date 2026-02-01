@@ -1,0 +1,9 @@
+{% extends "editor/base.html" %}
+{% block content %}
+<div class="error-box">
+  <h1>Error</h1>
+  <p class="message">{{ message }}</p>
+  {% if detail %}<p class="detail">{{ detail }}</p>{% endif %}
+  <p><a href="{{ back_url }}" class="back-link">Go back</a></p>
+</div>
+{% endblock %}

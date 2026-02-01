@@ -1,0 +1,59 @@
+{% extends "editor/base.html" %}
+{% load static %}
+{% load editor_extras %}
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="{% url 'database_list' %}">Databases</a> →
+  <a href="{% url 'schema_list' db_alias=db_alias %}">{{ db_alias }}</a> →
+  <a href="{% url 'table_list' db_alias=db_alias schema_name=schema_name %}">{{ schema_name }}</a> →
+  {{ table_name }}
+  <a href="{% url 'table_grid' db_alias=db_alias schema_name=schema_name table_name=table_name %}?refresh=1" class="refresh">Refresh</a>
+</nav>
+{% endblock %}
+{% block content %}
+<h1>{{ table_name }}</h1>
+<div class="grid-toolbar">
+  {% if pk_columns %}
+  <button type="button" id="save-changes" disabled>Save changes</button>
+  <button type="button" id="revert-changes">Revert</button>
+  <span id="dirty-count"></span>
+  {% else %}
+  <span class="read-only-msg">Read-only (table has no primary key). Add a primary key in PostgreSQL to enable editing.</span>
+  {% endif %}
+</div>
+<form method="get" id="filter-form" class="filter-form">
+  <input type="hidden" name="sort" value="{{ sort_col }}">
+  <input type="hidden" name="order" value="{{ sort_order }}">
+  <table class="data-grid" id="data-grid">
+    <thead>
+      <tr>
+        {% for col in column_names %}
+        <th>
+          <a href="?sort={{ col }}&order={% if sort_col == col and sort_order == 'asc' %}desc{% else %}asc{% endif %}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}&page=1">{{ col }}{% if sort_col == col %} ({{ sort_order }}){% endif %}</a>
+          <input type="text" name="filter_{{ col }}" value="{{ filter_values|get_item:col }}" placeholder="Filter" class="filter-input" data-column="{{ col }}">
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr data-row-index="{{ forloop.counter0 }}" data-pk="{{ row|pk_json:pk_columns }}">
+      {% for col in column_names %}
+      <td data-column="{{ col }}" data-original="{{ row|get_item:col|force_escape }}"><span class="cell-display">{{ row|get_item:col }}</span><input type="text" class="cell-edit" value="{{ row|get_item:col|force_escape }}" style="display:none"></td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+  <button type="submit" class="apply-filters">Apply filters</button>
+</form>
+<p class="pagination">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&sort={{ sort_col }}&order={{ sort_order }}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}">Previous</a>{% endif %}
+  Page {{ page.number }} of {{ page.paginator.num_pages }} ({{ page.paginator.count }} rows)
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}&sort={{ sort_col }}&order={{ sort_order }}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}">Next</a>{% endif %}
+</p>
+{% if pk_columns %}
+<script id="edit-grid-config" type="application/json">{{ config_json|safe }}</script>
+<script src="{% static 'editor/js/grid.js' %}"></script>
+{% endif %}
+{% endblock %}

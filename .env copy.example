@@ -1,0 +1,23 @@
+# Docker: set when using image from Docker Hub (e.g. youruser/local-database-editor:latest)
+# Leave unset to use locally built image (local-database-editor:latest)
+# DOCKER_IMAGE=your-dockerhub-username/local-database-editor:latest
+
+# Django
+DJANGO_SECRET_KEY=change-me-in-production
+DEBUG=0
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+
+# Target PostgreSQL (financial_db)
+PG_HOST=remote_host
+PG_PORT=5432
+PG_DB=postgres
+PG_USER=postgres
+PG_PASSWORD=
+
+# Single user for the editor (created on first run)
+EDITOR_USERNAME=admin
+EDITOR_PASSWORD=changeme
+EDITOR_EMAIL=admin@example.com
+
+# OPTIONAL DockerHub
+# DOCKER_IMAGE=your-dockerhub-username/local-database-editor:latest

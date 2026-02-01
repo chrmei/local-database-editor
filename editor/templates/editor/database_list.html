@@ -1,0 +1,9 @@
+{% extends "editor/base.html" %}
+{% block content %}
+<h1>Databases</h1>
+<ul class="card-list">
+  {% for db in databases %}
+  <li><a href="{% url 'schema_list' db_alias=db %}">{{ db }}</a></li>
+  {% endfor %}
+</ul>
+{% endblock %}
