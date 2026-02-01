@@ -224,6 +224,7 @@ def table_grid(request, db_alias, schema_name, table_name):
     row_data = [dict(zip(column_names, row)) for row in rows]
 
     filter_values = {col: request.GET.get(f"filter_{col}", "") for col in column_names}
+    has_filters = any(v.strip() for v in filter_values.values())
     pk_uses_sequence = get_pk_sequence_columns(db_alias, schema_name, table_name, refresh=refresh)
     config_json = json.dumps({
         "dbAlias": db_alias,
@@ -253,6 +254,7 @@ def table_grid(request, db_alias, schema_name, table_name):
             "sort_col": order_col,
             "sort_order": sort_order,
             "filter_values": filter_values,
+            "has_filters": has_filters,
             "config_json": config_json,
         },
     )

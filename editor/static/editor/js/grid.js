@@ -5,6 +5,56 @@
   var INTEGER_TYPES = ["integer", "bigint", "smallint", "serial", "bigserial"];
   var FLOAT_TYPES = ["numeric", "decimal", "real", "double precision"];
 
+  // Filter toggle functionality: wrappers are hidden by default (template + CSS)
+  if (grid) {
+    grid.addEventListener("click", function (e) {
+      var toggleBtn = e.target.closest(".filter-toggle");
+      if (!toggleBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      
+      var th = toggleBtn.closest("th");
+      var wrapper = th && th.querySelector(".filter-wrapper");
+      var input = wrapper && wrapper.querySelector(".filter-input");
+      
+      if (wrapper) {
+        var isExpanded = wrapper.classList.contains("expanded");
+        wrapper.classList.toggle("expanded");
+        if (isExpanded) {
+          wrapper.style.display = "none";
+        } else {
+          wrapper.style.removeProperty("display");
+        }
+        
+        // Focus input when expanding
+        if (!isExpanded && input) {
+          setTimeout(function () { input.focus(); }, 50);
+        }
+      }
+    });
+
+    // Update toggle button state when filter input changes
+    grid.addEventListener("input", function (e) {
+      if (!e.target.classList.contains("filter-input")) return;
+      var th = e.target.closest("th");
+      var toggleBtn = th && th.querySelector(".filter-toggle");
+      if (toggleBtn) {
+        if (e.target.value.trim()) {
+          toggleBtn.classList.add("active");
+        } else {
+          toggleBtn.classList.remove("active");
+        }
+      }
+    });
+
+    // Allow Enter key to submit filter form
+    grid.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && e.target.classList.contains("filter-input")) {
+        e.target.closest("form").submit();
+      }
+    });
+  }
+
   function isCleanDisplayOn() {
     return localStorage.getItem("editorCleanDisplay") !== "false";
   }

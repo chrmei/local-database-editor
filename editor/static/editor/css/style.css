@@ -35,17 +35,31 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color
 .grid-toolbar button { padding: 0.5rem 1rem; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
 .grid-toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
 .grid-toolbar #dirty-count { color: #aaa; font-size: 0.9rem; }
-.grid-toolbar .apply-filters { padding: 0.5rem 1rem; margin-left: 0; background: #0f3460; color: #eee; }
+.grid-toolbar .apply-filters { padding: 0.5rem 1rem; margin-left: 0; background: #0f3460; color: #eee; border-radius: 4px; font-size: 0.875rem; }
 .grid-toolbar .apply-filters:hover { background: #e94560; color: #fff; }
+.grid-toolbar .clear-filters { text-decoration: none; display: inline-block; }
+.grid-toolbar .clear-filters.hidden { display: none; }
 .data-grid-wrapper { width: 100%; overflow-x: auto; margin-bottom: 0; }
 .data-grid { width: 100%; min-width: max-content; border-collapse: collapse; background: #16213e; border-radius: 6px; table-layout: auto; }
 .data-grid th, .data-grid td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #0f3460; }
-.data-grid th { background: #0f3460; color: #e94560; font-weight: 600; white-space: nowrap; }
+.data-grid th { background: #0f3460; color: #e94560; font-weight: 600; white-space: nowrap; vertical-align: top; position: relative; }
 .data-grid td { cursor: pointer; }
 .data-grid tr.dirty td { background: rgba(233, 69, 96, 0.1); }
 .data-grid th a { color: #e94560; text-decoration: none; }
 .data-grid th a:hover { text-decoration: underline; }
-.data-grid .filter-input { width: 100%; max-width: 120px; padding: 0.25rem; margin-top: 0.25rem; background: #1a1a2e; border: 1px solid #0f3460; color: #eee; border-radius: 4px; font-size: 0.85rem; }
+
+/* Column header with filter toggle */
+.data-grid .column-header { display: flex; align-items: center; gap: 0.5rem; }
+.data-grid .filter-toggle { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: 4px; color: #888; cursor: pointer; transition: all 0.15s ease; flex-shrink: 0; }
+.data-grid .filter-toggle:hover { background: rgba(233, 69, 96, 0.15); border-color: #e94560; color: #e94560; }
+.data-grid .filter-toggle.active { color: #e94560; background: rgba(233, 69, 96, 0.2); border-color: #e94560; }
+.data-grid .filter-toggle svg { display: block; }
+
+/* Filter wrapper with expand/collapse animation */
+.data-grid .filter-wrapper { display: none; margin-top: 0; position: absolute; right: 0.35rem; top: 0.35rem; }
+.data-grid .filter-wrapper.expanded { display: block; }
+.data-grid .filter-input { width: 100%; max-width: 140px; padding: 0.3rem 0.5rem; background: #1a1a2e; border: 1px solid #0f3460; color: #eee; border-radius: 4px; font-size: 0.85rem; }
+.data-grid .filter-input:focus { border-color: #e94560; outline: none; }
 .data-grid .cell-edit { width: 100%; padding: 0.25rem; background: #1a1a2e; border: 1px solid #e94560; color: #eee; border-radius: 4px; }
 .data-grid td .cell-now { margin-left: 0.25rem; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: #0f3460; color: #eee; border: 1px solid #e94560; border-radius: 4px; cursor: pointer; }
 .data-grid td .cell-now:hover { background: #e94560; color: #fff; }
@@ -53,7 +67,7 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color
 .data-grid tr.add-row-form .add-row-now:hover { background: #e94560; color: #fff; }
 .pagination { margin-top: 1rem; color: #888; }
 .pagination a { color: #e94560; text-decoration: none; margin: 0 0.5rem; }
-.apply-filters { padding: 0.4rem 0.8rem; margin-left: 0.5rem; background: #0f3460; color: #eee; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+.apply-filters { padding: 0.5rem 1rem; margin-left: 0.5rem; background: #0f3460; color: #eee; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; display: inline-block; text-decoration: none; }
 .apply-filters:hover { background: #e94560; color: #fff; }
 .error-box { max-width: 480px; margin: 2rem auto; padding: 2rem; background: #16213e; border-radius: 8px; border: 1px solid #e94560; }
 .error-box .message { color: #e94560; font-weight: 600; }

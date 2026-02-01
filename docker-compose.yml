@@ -15,4 +15,4 @@ services:
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py create_single_user --noinput 2>/dev/null || true &&
-             gunicorn --bind 0.0.0.0:8000 local_database_editor.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 --timeout 120 --workers 2 local_database_editor.wsgi:application"

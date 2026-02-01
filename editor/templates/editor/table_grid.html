@@ -19,6 +19,7 @@
   <button type="button" id="add-row-btn">Add row</button>
   {% endif %}
   <button type="submit" class="apply-filters" form="filter-form">Apply filters</button>
+  <a href="{% url 'table_grid' db_alias=db_alias schema_name=schema_name table_name=table_name %}" class="apply-filters clear-filters{% if not has_filters %} hidden{% endif %}" id="clear-filters">Clear filters</a>
   {% if pk_columns %}
   <span id="dirty-count"></span>
   {% else %}
@@ -34,8 +35,15 @@
       <tr>
         {% for col in columns %}
         <th>
-          <a href="?sort={{ col.name }}&order={% if sort_col == col.name and sort_order == 'asc' %}desc{% else %}asc{% endif %}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}&page=1">{{ col.name }}{% if sort_col == col.name %} ({{ sort_order }}){% endif %}</a>
-          <input type="text" name="filter_{{ col.name }}" value="{{ filter_values|get_item:col.name }}" placeholder="Filter" class="filter-input" data-column="{{ col.name }}">
+          <div class="column-header">
+            <a href="?sort={{ col.name }}&order={% if sort_col == col.name and sort_order == 'asc' %}desc{% else %}asc{% endif %}{% for k,v in filter_values.items %}{% if v %}&filter_{{ k }}={{ v }}{% endif %}{% endfor %}&page=1">{{ col.name }}{% if sort_col == col.name %} ({{ sort_order }}){% endif %}</a>
+            <button type="button" class="filter-toggle{% if filter_values|get_item:col.name %} active{% endif %}" title="Filter this column" data-column="{{ col.name }}">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M1.5 1.5h13L9 7v5.5l-2 1.5V7z"/></svg>
+            </button>
+          </div>
+          <div class="filter-wrapper" style="display: none;">
+            <input type="text" name="filter_{{ col.name }}" value="{{ filter_values|get_item:col.name }}" placeholder="Filter..." class="filter-input" data-column="{{ col.name }}">
+          </div>
         </th>
         {% endfor %}
         {% if pk_columns %}
