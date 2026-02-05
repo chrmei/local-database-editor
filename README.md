@@ -122,6 +122,12 @@ cp .env.example .env
 .venv/bin/python manage.py runserver
 ```
 
+## Demo
+
+![Database Editor Interface](images/image_01.png)
+
+![Table Editing View](images/image_02.png)
+
 ## License
 
 MIT License
