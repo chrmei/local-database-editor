@@ -1,0 +1,28 @@
+{% extends "editor/base.html" %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><a href="{% url 'database_list' %}">Databases</a> → <a href="{% url 'schema_list' db_alias=db_alias %}">{% if db_config %}{{ db_config.name }}{% else %}{{ db_alias }}{% endif %}</a> → Delete Schema</nav>
+{% endblock %}
+{% block content %}
+<h1>Delete Schema</h1>
+<div class="error-box" style="max-width: 600px;">
+  <p>Are you sure you want to delete the schema <strong>{{ schema_name }}</strong>?</p>
+  {% if has_tables %}
+  <div style="background-color: rgba(233, 69, 96, 0.1); border: 1px solid #e94560; border-radius: 4px; padding: 1rem; margin: 1rem 0;">
+    <p style="color: #e94560; font-weight: 600; margin: 0 0 0.5rem 0;">Warning: This schema contains tables!</p>
+    <p style="margin: 0; font-size: 0.9em;">Deleting this schema will also delete all tables and data within it. This action cannot be undone.</p>
+  </div>
+  {% else %}
+  <p style="font-size: 0.9em; color: #666;">
+    This will permanently delete the schema. This action cannot be undone.
+  </p>
+  {% endif %}
+  <form method="post" style="margin-top: 20px;">
+    {% csrf_token %}
+    {% if has_tables %}
+    <input type="hidden" name="force" value="1">
+    {% endif %}
+    <button type="submit" class="button" style="background-color: #dc3545;">Delete Schema{% if has_tables %} (with all tables){% endif %}</button>
+    <a href="{% url 'schema_list' db_alias=db_alias %}" class="button" style="background-color: #6c757d; margin-left: 10px;">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -13,6 +13,7 @@
     {% if user.is_authenticated %}
     <div class="header-right">
       <div class="header-right-row">
+        <a href="{% url 'database_config_list' %}" style="color: #aaa; text-decoration: none; margin-right: 1rem;">Manage Connections</a>
         <span class="user">{{ user.get_username }}</span>
         <a href="{% url 'logout' %}" class="logout">Log out</a>
       </div>

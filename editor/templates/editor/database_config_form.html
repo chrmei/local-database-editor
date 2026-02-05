@@ -1,0 +1,80 @@
+{% extends "editor/base.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="error-box" style="margin-bottom: 20px;">
+    {{ form.non_field_errors }}
+  </div>
+  {% endif %}
+  
+  <div style="max-width: 600px;">
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.name.id_for_label }}">Display Name:</label>
+      {{ form.name }}
+      {% if form.name.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.name.errors }}</div>
+      {% endif %}
+      <div style="font-size: 0.9em; color: #666; margin-top: 4px;">A friendly name to identify this database</div>
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.host.id_for_label }}">Host:</label>
+      {{ form.host }}
+      {% if form.host.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.host.errors }}</div>
+      {% endif %}
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.port.id_for_label }}">Port:</label>
+      {{ form.port }}
+      {% if form.port.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.port.errors }}</div>
+      {% endif %}
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.database.id_for_label }}">Database Name:</label>
+      {{ form.database }}
+      {% if form.database.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.database.errors }}</div>
+      {% endif %}
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.schema.id_for_label }}">Schema Name:</label>
+      {{ form.schema }}
+      {% if form.schema.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.schema.errors }}</div>
+      {% endif %}
+      <div style="font-size: 0.9em; color: #666; margin-top: 4px;">Schema name within the database (e.g., 'public')</div>
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.username.id_for_label }}">Username:</label>
+      {{ form.username }}
+      {% if form.username.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.username.errors }}</div>
+      {% endif %}
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.password.id_for_label }}">Password:</label>
+      {{ form.password }}
+      {% if form.password.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.password.errors }}</div>
+      {% endif %}
+      {% if form.password.help_text %}
+      <div style="font-size: 0.9em; color: #666; margin-top: 4px;">{{ form.password.help_text }}</div>
+      {% endif %}
+    </div>
+    
+    <div style="margin-top: 20px;">
+      <button type="submit" class="button">Save</button>
+      <a href="{% url 'database_config_list' %}" class="button" style="background-color: #6c757d; margin-left: 10px;">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

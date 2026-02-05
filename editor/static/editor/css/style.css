@@ -25,6 +25,10 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color
 .login-box input[type="text"], .login-box input[type="password"] { width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #0f3460; color: #eee; border-radius: 4px; }
 .login-box button { width: 100%; padding: 0.6rem; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
 .login-box .error { color: #e94560; margin-bottom: 1rem; }
+.button { display: inline-block; padding: 0.5rem 1rem; background: #e94560; color: #fff; text-decoration: none; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+.button:hover { background: #d63447; }
+.form-control { width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #0f3460; color: #eee; border-radius: 4px; font-size: 1rem; }
+.form-control:focus { border-color: #e94560; outline: none; }
 .breadcrumb { margin-bottom: 1rem; color: #888; font-size: 0.9rem; }
 .breadcrumb a { color: #e94560; text-decoration: none; }
 .breadcrumb .refresh { margin-left: 0.5rem; font-size: 0.85rem; }

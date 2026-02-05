@@ -142,3 +142,103 @@ def invalidate_introspection_cache(db_alias: str = None, schema_name: str = None
     # LocMemCache doesn't support delete by pattern; we just document that Refresh clears by re-fetching with refresh=True.
     # So we don't need to implement pattern delete; views will pass refresh=True when user clicks Refresh.
     pass
+
+
+def create_schema(db_alias: str, schema_name: str) -> tuple[bool, str]:
+    """
+    Create a new schema in the database.
+    
+    Args:
+        db_alias: Database alias
+        schema_name: Name of the schema to create
+    
+    Returns:
+        tuple: (success: bool, error_message: str or None)
+    """
+    # Validate schema name
+    if not schema_name or not schema_name.strip():
+        return False, "Schema name cannot be empty"
+    
+    schema_name = schema_name.strip()
+    
+    # Prevent creating system schemas
+    system_schemas = {'pg_catalog', 'information_schema', 'pg_toast'}
+    if schema_name.lower() in system_schemas or schema_name.lower().startswith('pg_'):
+        return False, f"Cannot create system schema '{schema_name}'"
+    
+    from django.db import connections
+    from django.db.utils import OperationalError, ProgrammingError
+    
+    try:
+        conn = connections[db_alias]
+        with conn.cursor() as cur:
+            # Use IF NOT EXISTS to avoid errors if schema already exists
+            cur.execute(f'CREATE SCHEMA IF NOT EXISTS {conn.ops.quote_name(schema_name)}')
+        # Invalidate schema cache
+        cache.delete(_cache_key("editor", "schemas", db_alias))
+        return True, None
+    except (OperationalError, ProgrammingError) as e:
+        return False, str(e)
+    except Exception as e:
+        return False, f"Error creating schema: {str(e)}"
+
+
+def delete_schema(db_alias: str, schema_name: str, force: bool = False) -> tuple[bool, str]:
+    """
+    Delete a schema from the database.
+    
+    Args:
+        db_alias: Database alias
+        schema_name: Name of the schema to delete
+        force: If True, delete even if schema contains tables (CASCADE)
+    
+    Returns:
+        tuple: (success: bool, error_message: str or None)
+    """
+    # Validate schema name
+    if not schema_name or not schema_name.strip():
+        return False, "Schema name cannot be empty"
+    
+    schema_name = schema_name.strip()
+    
+    # Prevent deleting system schemas
+    system_schemas = {'pg_catalog', 'information_schema', 'pg_toast'}
+    if schema_name.lower() in system_schemas or schema_name.lower().startswith('pg_'):
+        return False, f"Cannot delete system schema '{schema_name}'"
+    
+    from django.db import connections
+    from django.db.utils import OperationalError, ProgrammingError
+    
+    try:
+        conn = connections[db_alias]
+        
+        # Check if schema has tables
+        tables = get_tables(db_alias, schema_name, refresh=True)
+        if tables and not force:
+            return False, f"Schema '{schema_name}' contains {len(tables)} table(s). Use force delete to remove them."
+        
+        with conn.cursor() as cur:
+            if force:
+                cur.execute(f'DROP SCHEMA IF EXISTS {conn.ops.quote_name(schema_name)} CASCADE')
+            else:
+                cur.execute(f'DROP SCHEMA IF EXISTS {conn.ops.quote_name(schema_name)}')
+        
+        # Invalidate caches
+        cache.delete(_cache_key("editor", "schemas", db_alias))
+        # Also invalidate table caches for this schema
+        for table in tables:
+            cache.delete(_cache_key("editor", "tables", db_alias, schema_name))
+            cache.delete(_cache_key("editor", "columns", db_alias, schema_name, table))
+            cache.delete(_cache_key("editor", "pk", db_alias, schema_name, table))
+        
+        return True, None
+    except (OperationalError, ProgrammingError) as e:
+        return False, str(e)
+    except Exception as e:
+        return False, f"Error deleting schema: {str(e)}"
+
+
+def schema_has_tables(db_alias: str, schema_name: str) -> bool:
+    """Check if a schema contains any tables."""
+    tables = get_tables(db_alias, schema_name, refresh=True)
+    return len(tables) > 0

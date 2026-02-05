@@ -1,9 +1,20 @@
 {% extends "editor/base.html" %}
 {% block content %}
 <h1>Databases</h1>
+{% if databases %}
 <ul class="card-list">
   {% for db in databases %}
-  <li><a href="{% url 'schema_list' db_alias=db %}">{{ db }}</a></li>
+  <li>
+    <a href="{% url 'table_list' db_alias=db.alias schema_name=db.schema %}">
+      {{ db.name }}
+      <div style="font-size: 0.9em; color: #666; margin-top: 4px;">
+        {{ db.database }} / {{ db.schema }}
+      </div>
+    </a>
+  </li>
   {% endfor %}
 </ul>
+{% else %}
+<p>No databases configured. <a href="{% url 'database_config_list' %}">Add your first database connection</a>.</p>
+{% endif %}
 {% endblock %}

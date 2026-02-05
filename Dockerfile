@@ -13,5 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN python manage.py collectstatic --noinput 2>/dev/null || true
 
+# Copy and make startup script executable
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 EXPOSE 8000
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "local_database_editor.wsgi:application"]
+CMD ["/app/start.sh"]

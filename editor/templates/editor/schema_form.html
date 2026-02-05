@@ -1,0 +1,33 @@
+{% extends "editor/base.html" %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><a href="{% url 'database_list' %}">Databases</a> → <a href="{% url 'schema_list' db_alias=db_alias %}">{% if db_config %}{{ db_config.name }}{% else %}{{ db_alias }}{% endif %}</a> → Create Schema</nav>
+{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="error-box" style="margin-bottom: 20px;">
+    {{ form.non_field_errors }}
+  </div>
+  {% endif %}
+  
+  <div style="max-width: 600px;">
+    <div style="margin-bottom: 15px;">
+      <label for="{{ form.name.id_for_label }}">Schema Name:</label>
+      {{ form.name }}
+      {% if form.name.errors %}
+      <div style="color: #dc3545; font-size: 0.9em; margin-top: 4px;">{{ form.name.errors }}</div>
+      {% endif %}
+      {% if form.name.help_text %}
+      <div style="font-size: 0.9em; color: #666; margin-top: 4px;">{{ form.name.help_text }}</div>
+      {% endif %}
+    </div>
+    
+    <div style="margin-top: 20px;">
+      <button type="submit" class="button">Create Schema</button>
+      <a href="{% url 'schema_list' db_alias=db_alias %}" class="button" style="background-color: #6c757d; margin-left: 10px;">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

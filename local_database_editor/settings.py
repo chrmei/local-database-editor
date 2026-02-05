@@ -72,17 +72,10 @@ TEMPLATES = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        "NAME": env("SQLITE_DB_PATH", default=os.path.join(BASE_DIR, "db.sqlite3")),
     },
-    env("PG_ALIAS"): {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("PG_DB"),
-        "USER": env("PG_USER"),
-        "PASSWORD": env("PG_PASSWORD"),
-        "HOST": env("PG_HOST"),
-        "PORT": env("PG_PORT"),
-        "OPTIONS": {"connect_timeout": 10},
-    },
+    # Dynamic database connections are added at runtime via editor.db_manager
+    # Legacy .env PG_* variables are no longer used - databases are managed through the UI
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -107,7 +100,7 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EDITABLE_DATABASES = [env("PG_ALIAS")]
+# EDITABLE_DATABASES is no longer used - databases are managed per-user via DatabaseConfig model
 
 CACHES = {
     "default": {

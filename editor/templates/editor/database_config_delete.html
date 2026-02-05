@@ -1,0 +1,15 @@
+{% extends "editor/base.html" %}
+{% block content %}
+<h1>Delete Database</h1>
+<div class="error-box" style="max-width: 600px;">
+  <p>Are you sure you want to delete the database configuration <strong>{{ db_config.name }}</strong>?</p>
+  <p style="font-size: 0.9em; color: #666;">
+    This will remove the database configuration from your list, but will not delete the actual database.
+  </p>
+  <form method="post" style="margin-top: 20px;">
+    {% csrf_token %}
+    <button type="submit" class="button" style="background-color: #dc3545;">Delete</button>
+    <a href="{% url 'database_config_list' %}" class="button" style="background-color: #6c757d; margin-left: 10px;">Cancel</a>
+  </form>
+</div>
+{% endblock %}

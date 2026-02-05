@@ -1,6 +1,6 @@
 {% extends "editor/base.html" %}
 {% block breadcrumb %}
-<nav class="breadcrumb"><a href="{% url 'database_list' %}">Databases</a> → <a href="{% url 'schema_list' db_alias=db_alias %}">{{ db_alias }}</a> → <a href="{% url 'table_list' db_alias=db_alias schema_name=schema_name %}">{{ schema_name }}</a> → Tables <a href="?refresh=1" class="refresh">Refresh</a></nav>
+<nav class="breadcrumb"><a href="{% url 'database_list' %}">Databases</a> → <a href="{% url 'schema_list' db_alias=db_alias %}">{% if db_config %}{{ db_config.name }}{% else %}{{ db_alias }}{% endif %}</a> → <a href="{% url 'table_list' db_alias=db_alias schema_name=schema_name %}">{{ schema_name }}</a> → Tables <a href="?refresh=1" class="refresh">Refresh</a></nav>
 {% endblock %}
 {% block content %}
 <h1>Tables ({{ schema_name }})</h1>

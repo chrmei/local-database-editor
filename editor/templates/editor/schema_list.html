@@ -1,12 +1,31 @@
 {% extends "editor/base.html" %}
 {% block breadcrumb %}
-<nav class="breadcrumb"><a href="{% url 'database_list' %}">Databases</a> → <a href="{% url 'schema_list' db_alias=db_alias %}">{{ db_alias }}</a> → Schemas <a href="?refresh=1" class="refresh">Refresh</a></nav>
+<nav class="breadcrumb"><a href="{% url 'database_list' %}">Databases</a> → <a href="{% url 'schema_list' db_alias=db_alias %}">{% if db_config %}{{ db_config.name }}{% else %}{{ db_alias }}{% endif %}</a> → Schemas <a href="?refresh=1" class="refresh">Refresh</a></nav>
 {% endblock %}
 {% block content %}
-<h1>Schemas ({{ db_alias }})</h1>
+<h1>Schemas ({% if db_config %}{{ db_config.name }}{% else %}{{ db_alias }}{% endif %})</h1>
+<div style="margin-bottom: 20px;">
+  <a href="{% url 'schema_create' db_alias=db_alias %}" class="button">Create Schema</a>
+</div>
+{% if schemas %}
 <ul class="card-list">
-  {% for schema in schemas %}
-  <li><a href="{% url 'table_list' db_alias=db_alias schema_name=schema %}">{{ schema }}</a></li>
+  {% for info in schema_info %}
+  <li>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <a href="{% url 'table_list' db_alias=db_alias schema_name=info.name %}">{{ info.name }}</a>
+        {% if info.has_tables %}
+        <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Contains tables</div>
+        {% endif %}
+      </div>
+      <div>
+        <a href="{% url 'schema_delete' db_alias=db_alias schema_name=info.name %}" class="button" style="background-color: #dc3545; font-size: 0.85rem; padding: 0.4rem 0.8rem;">Delete</a>
+      </div>
+    </div>
+  </li>
   {% endfor %}
 </ul>
+{% else %}
+<p>No schemas found. <a href="{% url 'schema_create' db_alias=db_alias %}">Create your first schema</a>.</p>
+{% endif %}
 {% endblock %}

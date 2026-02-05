@@ -1,0 +1,42 @@
+{% extends "editor/base.html" %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <h1 style="margin: 0;">Manage Connections</h1>
+  <a href="{% url 'database_config_add' %}" class="button">Add Database Connection</a>
+</div>
+{% if databases %}
+<div class="data-grid-wrapper">
+  <table class="data-grid">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Host</th>
+        <th>Port</th>
+        <th>Database</th>
+        <th>Schema</th>
+        <th class="actions-header">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for db in databases %}
+      <tr>
+        <td>
+          <a href="{% url 'table_list' db_alias=db.alias schema_name=db.schema %}" style="color: #e94560; text-decoration: none;">{{ db.name }}</a>
+        </td>
+        <td>{{ db.host }}</td>
+        <td>{{ db.port }}</td>
+        <td>{{ db.database }}</td>
+        <td>{{ db.schema }}</td>
+        <td class="actions-cell">
+          <a href="{% url 'database_config_edit' pk=db.pk %}" class="button" style="margin-right: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.85rem;">Edit</a>
+          <a href="{% url 'database_config_delete' pk=db.pk %}" class="button" style="background-color: #dc3545; padding: 0.4rem 0.8rem; font-size: 0.85rem;">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p>No databases configured. <a href="{% url 'database_config_add' %}">Add your first database connection</a>.</p>
+{% endif %}
+{% endblock %}

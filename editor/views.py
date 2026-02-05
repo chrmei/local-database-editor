@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.middleware.csrf import get_token
 from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
+from django.shortcuts import get_object_or_404
+from django.contrib import messages
 
 from .introspection import (
     get_schemas,
@@ -17,6 +19,18 @@ from .introspection import (
     get_primary_key_columns,
     get_table_meta,
     get_pk_sequence_columns,
+    create_schema,
+    delete_schema,
+    schema_has_tables,
+)
+from .models import DatabaseConfig
+from .forms import DatabaseConfigForm
+from .schema_forms import CreateSchemaForm
+from .db_manager import (
+    ensure_database_connection,
+    remove_database_connection,
+    test_database_connection,
+    load_user_databases,
 )
 
 _DATE_TYPES = {"date"}
@@ -65,13 +79,130 @@ def _coerce_value(val, data_type):
     return val
 
 
+# Database Configuration Management Views
+
+@login_required
+def database_config_list(request):
+    """List all database configurations for the current user."""
+    databases = DatabaseConfig.objects.filter(user=request.user)
+    return render(
+        request,
+        "editor/database_config_list.html",
+        {"databases": databases},
+    )
+
+
+@login_required
+def database_config_add(request):
+    """Add a new database configuration."""
+    if request.method == "POST":
+        form = DatabaseConfigForm(request.POST, user=request.user)
+        if form.is_valid():
+            db_config = form.save()
+            # Load the connection immediately
+            try:
+                ensure_database_connection(db_config.alias, user=request.user)
+                messages.success(request, f"Database '{db_config.name}' added successfully.")
+                return redirect("database_config_list")
+            except Exception as e:
+                messages.error(request, f"Database added but connection failed: {str(e)}")
+                return redirect("database_config_list")
+    else:
+        form = DatabaseConfigForm(user=request.user)
+    
+    return render(
+        request,
+        "editor/database_config_form.html",
+        {"form": form, "title": "Add Database Connection"},
+    )
+
+
+@login_required
+def database_config_edit(request, pk):
+    """Edit an existing database configuration."""
+    db_config = get_object_or_404(DatabaseConfig, pk=pk, user=request.user)
+    
+    if request.method == "POST":
+        form = DatabaseConfigForm(request.POST, instance=db_config, user=request.user)
+        if form.is_valid():
+            db_config = form.save()
+            # Reload connection with new config
+            try:
+                ensure_database_connection(db_config.alias, user=request.user)
+                messages.success(request, f"Database '{db_config.name}' updated successfully.")
+                return redirect("database_config_list")
+            except Exception as e:
+                messages.error(request, f"Database updated but connection failed: {str(e)}")
+                return redirect("database_config_list")
+    else:
+        form = DatabaseConfigForm(instance=db_config, user=request.user)
+    
+    return render(
+        request,
+        "editor/database_config_form.html",
+        {"form": form, "db_config": db_config, "title": f"Edit Database: {db_config.name}"},
+    )
+
+
+@login_required
+def database_config_delete(request, pk):
+    """Delete a database configuration."""
+    db_config = get_object_or_404(DatabaseConfig, pk=pk, user=request.user)
+    
+    if request.method == "POST":
+        alias = db_config.alias
+        name = db_config.name
+        db_config.delete()
+        # Remove connection from registry
+        remove_database_connection(alias)
+        messages.success(request, f"Database '{name}' deleted successfully.")
+        return redirect("database_config_list")
+    
+    return render(
+        request,
+        "editor/database_config_delete.html",
+        {"db_config": db_config},
+    )
+
+
+@login_required
+def database_config_test(request):
+    """AJAX endpoint to test database connection."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "POST required"})
+    
+    try:
+        data = json.loads(request.body)
+        host = data.get("host")
+        port = data.get("port")
+        database = data.get("database")
+        username = data.get("username")
+        password = data.get("password")
+        
+        if not all([host, port, database, username, password]):
+            return JsonResponse({"ok": False, "error": "Missing required fields"})
+        
+        success, error = test_database_connection(host, port, database, username, password)
+        if success:
+            return JsonResponse({"ok": True, "message": "Connection successful"})
+        else:
+            return JsonResponse({"ok": False, "error": error})
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)})
+
+
 def home_redirect(request):
     return redirect("database_list")
 
 
 @login_required
 def database_list(request):
-    databases = settings.EDITABLE_DATABASES
+    """List all databases for the current user."""
+    # Load user's database connections
+    load_user_databases(request.user)
+    databases = DatabaseConfig.objects.filter(user=request.user)
     return render(
         request,
         "editor/database_list.html",
@@ -81,11 +212,24 @@ def database_list(request):
 
 @login_required
 def schema_list(request, db_alias):
-    if db_alias not in settings.EDITABLE_DATABASES:
-        return HttpResponseBadRequest("Unknown database")
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
     refresh = request.GET.get("refresh") == "1"
     try:
         schemas = get_schemas(db_alias, refresh=refresh)
+        # Check which schemas have tables (optimized - only check if needed)
+        schema_info = []
+        for schema in schemas:
+            try:
+                # Quick check: try to get tables with refresh=False (uses cache if available)
+                tables = get_tables(db_alias, schema, refresh=False)
+                has_tables = len(tables) > 0
+            except Exception:
+                # If check fails, assume no tables to avoid blocking the page
+                has_tables = False
+            schema_info.append({"name": schema, "has_tables": has_tables})
     except (OperationalError, ProgrammingError) as e:
         return render(
             request,
@@ -96,14 +240,85 @@ def schema_list(request, db_alias):
     return render(
         request,
         "editor/schema_list.html",
-        {"db_alias": db_alias, "schemas": schemas},
+        {"db_alias": db_alias, "db_config": db_config, "schemas": schemas, "schema_info": schema_info},
+    )
+
+
+@login_required
+def schema_create(request, db_alias):
+    """Create a new schema."""
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
+    if request.method == "POST":
+        form = CreateSchemaForm(request.POST)
+        if form.is_valid():
+            schema_name = form.cleaned_data['name']
+            success, error = create_schema(db_alias, schema_name)
+            if success:
+                messages.success(request, f"Schema '{schema_name}' created successfully.")
+                return redirect("schema_list", db_alias=db_alias)
+            else:
+                messages.error(request, f"Failed to create schema: {error}")
+    else:
+        form = CreateSchemaForm()
+    
+    return render(
+        request,
+        "editor/schema_form.html",
+        {"form": form, "db_alias": db_alias, "db_config": db_config, "title": "Create Schema"},
+    )
+
+
+@login_required
+def schema_delete(request, db_alias, schema_name):
+    """Delete a schema."""
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
+    # Verify schema exists
+    try:
+        schemas = get_schemas(db_alias, refresh=False)
+        if schema_name not in schemas:
+            return HttpResponseBadRequest("Unknown schema")
+    except (OperationalError, ProgrammingError) as e:
+        return render(
+            request,
+            "editor/error.html",
+            {"message": "Could not connect to database.", "detail": str(e), "back_url": reverse("schema_list", args=[db_alias])},
+            status=502,
+        )
+    
+    # Check if schema has tables
+    has_tables = schema_has_tables(db_alias, schema_name)
+    
+    if request.method == "POST":
+        force = request.POST.get("force") == "1"
+        success, error = delete_schema(db_alias, schema_name, force=force)
+        if success:
+            messages.success(request, f"Schema '{schema_name}' deleted successfully.")
+            return redirect("schema_list", db_alias=db_alias)
+        else:
+            messages.error(request, f"Failed to delete schema: {error}")
+            # If error is about tables, redirect back to delete page with force option
+            if "contains" in error.lower() and "table" in error.lower():
+                return redirect("schema_delete", db_alias=db_alias, schema_name=schema_name)
+    
+    return render(
+        request,
+        "editor/schema_delete.html",
+        {"db_alias": db_alias, "db_config": db_config, "schema_name": schema_name, "has_tables": has_tables},
     )
 
 
 @login_required
 def table_list(request, db_alias, schema_name):
-    if db_alias not in settings.EDITABLE_DATABASES:
-        return HttpResponseBadRequest("Unknown database")
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
     try:
         valid_schemas = get_schemas(db_alias, refresh=False)
     except (OperationalError, ProgrammingError) as e:
@@ -128,14 +343,16 @@ def table_list(request, db_alias, schema_name):
     return render(
         request,
         "editor/table_list.html",
-        {"db_alias": db_alias, "schema_name": schema_name, "tables": tables},
+        {"db_alias": db_alias, "db_config": db_config, "schema_name": schema_name, "tables": tables},
     )
 
 
 @login_required
 def table_grid(request, db_alias, schema_name, table_name):
-    if db_alias not in settings.EDITABLE_DATABASES:
-        return HttpResponseBadRequest("Unknown database")
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
     try:
         valid_schemas = get_schemas(db_alias, refresh=False)
     except (OperationalError, ProgrammingError) as e:
@@ -244,6 +461,7 @@ def table_grid(request, db_alias, schema_name, table_name):
         "editor/table_grid.html",
         {
             "db_alias": db_alias,
+            "db_config": db_config,
             "schema_name": schema_name,
             "table_name": table_name,
             "columns": columns,
@@ -264,8 +482,10 @@ def table_grid(request, db_alias, schema_name, table_name):
 def table_save_rows(request, db_alias, schema_name, table_name):
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
-    if db_alias not in settings.EDITABLE_DATABASES:
-        return HttpResponseBadRequest("Unknown database")
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
     valid_schemas = get_schemas(db_alias, refresh=False)
     if schema_name not in valid_schemas:
         return HttpResponseBadRequest("Unknown schema")
@@ -328,8 +548,10 @@ def table_insert_row(request, db_alias, schema_name, table_name):
     """POST: insert a new row. PK columns with nextval default are omitted (auto-filled)."""
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
-    if db_alias not in settings.EDITABLE_DATABASES:
-        return HttpResponseBadRequest("Unknown database")
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
     valid_schemas = get_schemas(db_alias, refresh=False)
     if schema_name not in valid_schemas:
         return HttpResponseBadRequest("Unknown schema")
@@ -402,8 +624,10 @@ def table_delete_rows(request, db_alias, schema_name, table_name):
     """POST: hard delete rows by primary key."""
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
-    if db_alias not in settings.EDITABLE_DATABASES:
-        return HttpResponseBadRequest("Unknown database")
+    # Verify database ownership and ensure connection exists
+    db_config = get_object_or_404(DatabaseConfig, alias=db_alias, user=request.user)
+    ensure_database_connection(db_alias, user=request.user)
+    
     valid_schemas = get_schemas(db_alias, refresh=False)
     if schema_name not in valid_schemas:
         return HttpResponseBadRequest("Unknown schema")
